@@ -21,6 +21,8 @@ def _require_int_env(name: str) -> int:
 TOKEN = _require_env("ROGUEBOT_DISCORD_TOKEN")
 VERIFICATION_CHANNEL_ID = _require_int_env("ROGUEBOT_VERIFICATION_CHANNEL_ID")
 VERIFICATION_LOG_CHANNEL_ID = _require_int_env("ROGUEBOT_VERIFICATION_LOG_CHANNEL_ID")
+VERIFICATION_HELP_CHANNEL_ID = _require_int_env("ROGUEBOT_VERIFICATION_HELP_CHANNEL_ID")
+VERIFICATION_HELP_MESSAGE_ON_FAIL = "Please type `agree - {0}` to get verified."
 VERIFIED_ROLE_ID = _require_int_env("ROGUEBOT_VERIFIED_ROLE_ID")
 
 intents = discord.Intents.default()
@@ -44,7 +46,7 @@ async def on_message(message):
   if message.author.bot:
     return
 
-  if message.channel.id != VERIFICATION_CHANNEL_ID:
+  if message.channel.id not in (VERIFICATION_CHANNEL_ID, VERIFICATION_HELP_CHANNEL_ID):
     return
 
   raw_msg = message.content.replace("`", "(backtick)")
@@ -56,7 +58,14 @@ async def on_message(message):
     if role:
       await message.author.add_roles(role)
 
-  msg_to_send = f'''
+  if message.channel.id == VERIFICATION_CHANNEL_ID and not pass_verification:
+    help_channel = client.get_channel(VERIFICATION_HELP_CHANNEL_ID)
+    if help_channel:
+      help_message = VERIFICATION_HELP_MESSAGE_ON_FAIL.format(message.author.name.lower().strip())
+      await help_channel.send(f"<@{message.author.id}> - {help_message}")
+
+  if message.channel.id == VERIFICATION_CHANNEL_ID or pass_verification:
+    msg_to_send = f'''
 =================================================
 User Tag: <@{message.author.id}>
 ```
@@ -69,17 +78,17 @@ Message Created At: {message.created_at}
 Message: {raw_msg}
 ```
 '''
-  if len(msg_to_send) > 2000:
-    msg_to_send = msg_to_send[0:1980] + '\n```'
+    if len(msg_to_send) > 2000:
+      msg_to_send = msg_to_send[0:1980] + '\n```'
 
-  welcome_logs_channel = client.get_channel(VERIFICATION_LOG_CHANNEL_ID)
-  if welcome_logs_channel:
-    await welcome_logs_channel.send(msg_to_send)
+    welcome_logs_channel = client.get_channel(VERIFICATION_LOG_CHANNEL_ID)
+    if welcome_logs_channel:
+      await welcome_logs_channel.send(msg_to_send)
 
-  try:
-    await message.delete()
-  except Exception:
-    pass
+    try:
+      await message.delete()
+    except Exception:
+      pass
 
 
 client.run(TOKEN)
