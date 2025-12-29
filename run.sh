@@ -1,3 +1,6 @@
+docker container kill roguebot
+docker container rm roguebot
+
 docker build . -t roguebot
 docker run -d --name roguebot --restart unless-stopped \
   -e ROGUEBOT_DISCORD_TOKEN \
